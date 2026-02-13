@@ -249,13 +249,42 @@ class ComfyApi:
         prompt_id = uuid.uuid4().hex
         self._last_run_started = time.time()
         execute_outputs = []
+        missing_classes = set()
         for node_id, node in workflow.items():
             class_type = node.get("class_type")
             cls = self.nodes.NODE_CLASS_MAPPINGS.get(class_type)
             if cls is None:
+                if class_type:
+                    missing_classes.add(class_type)
                 continue
             if getattr(cls, "OUTPUT_NODE", False):
                 execute_outputs.append(node_id)
+
+        if not execute_outputs:
+            fallback_output_types = {
+                "VHS_VideoCombine",
+                "SaveImage",
+                "SaveAnimatedWEBP",
+                "SaveVideo",
+            }
+            for node_id, node in workflow.items():
+                if node.get("class_type") in fallback_output_types:
+                    execute_outputs.append(node_id)
+
+        if not execute_outputs:
+            # Last-resort: run all nodes so we don't silently return success with empty outputs.
+            execute_outputs = list(workflow.keys())
+            logging.warning(
+                "No OUTPUT_NODE detected; fallback to execute all nodes. missing_classes=%s",
+                sorted(missing_classes),
+            )
+        else:
+            logging.info(
+                "Workflow execute outputs=%s missing_classes=%s",
+                execute_outputs[:8],
+                sorted(missing_classes),
+            )
+
         self.executor.execute(workflow, prompt_id, extra_data={}, execute_outputs=execute_outputs)
         if not self.executor.success:
             raise RuntimeError("ComfyUI workflow execution failed")
