@@ -1,0 +1,16 @@
+[project]
+name = "gguf"
+description = "gguf node for comfyui"
+authors = [{name = "calcuis", email = "info@calcu.io"}]
+license = {file = "LICENSE"}
+readme = "README.md"
+version = "2.6.5"
+
+[project.urls]
+Repository = "https://github.com/calcuis/gguf"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = "gguf"
+DisplayName = "gguf"
+Icon = "https://raw.githubusercontent.com/calcuis/logo/master/logo.svg"

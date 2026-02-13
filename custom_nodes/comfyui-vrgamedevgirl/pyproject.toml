@@ -1,0 +1,15 @@
+# pyproject.toml
+[project]
+name = "comfyui-vrgamedevgirl" # Unique identifier for your node. Immutable after creation.
+description = "Custom nodes for ComfyUI by VRGameDevGirl."
+version = "1.0.0" # Custom Node version. Must be semantically versioned.
+license = { file = "LICENSE.txt" }
+dependencies = [] # Filled in from requirements.txt
+
+[project.urls]
+Repository = "https://github.com/vrgamegirl19/comfyui-vrgamedevgirl"
+
+[tool.comfy]
+PublisherId = "vrgamedevgirl" # Your publisher ID from Comfy Registry.
+DisplayName = "VRGameDevGirl Custom Nodes" # Display name for your node.
+Icon = "" # Optional: link to an icon (SVG, PNG, JPG, or GIF; MAX. 800x400px).

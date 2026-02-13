@@ -1,0 +1,11 @@
+GitPython
+PyGithub
+matrix-nio
+transformers
+huggingface-hub
+typer
+rich
+typing-extensions
+toml
+uv
+chardet

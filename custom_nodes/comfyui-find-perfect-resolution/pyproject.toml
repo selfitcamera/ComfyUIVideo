@@ -1,0 +1,35 @@
+[tool.poetry]
+name = "comfyui-find-perfect-resolution"
+version = "0.4"
+description = "Calculates the perfect resolution (divisible by N) while preserving aspect ratio, with optional upscale (enabled by default), crop/pad for small images, and always-valid IMAGE output."
+authors = ["ashtar1984 <your_email@example.com>"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/ashtar1984/comfyui-find-perfect-resolution"
+repository = "https://github.com/ashtar1984/comfyui-find-perfect-resolution"
+keywords = ["comfyui", "custom-node", "image", "resolution", "upscale", "crop", "pad"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Multimedia :: Graphics",
+    "Intended Audience :: Developers",
+    "Framework :: ComfyUI"
+]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+torch = ">=2.0.0"
+pillow = ">=9.0.0"
+
+[tool.poetry.group.dev.dependencies]
+black = {version = "^24.0", allow-prereleases = true}
+isort = "^5.13.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.urls]
+"Issues" = "https://github.com/ashtar1984/comfyui-find-perfect-resolution/issues"
+"Documentation" = "https://github.com/ashtar1984/comfyui-find-perfect-resolution#readme"
