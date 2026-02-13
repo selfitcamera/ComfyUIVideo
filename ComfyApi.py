@@ -295,6 +295,25 @@ class ComfyApi:
         if not outputs:
             status_tail = getattr(self.executor, "status_messages", [])[-8:]
             logging.warning("Workflow finished with empty outputs; status_tail=%s", status_tail)
+            for node_id in self._last_execute_outputs[:8]:
+                try:
+                    cached = self.executor.caches.outputs.get(node_id)
+                except Exception:
+                    cached = None
+                if cached is None:
+                    logging.warning("Output cache debug node=%s cache=none", node_id)
+                    continue
+                cache_outputs = getattr(cached, "outputs", None)
+                cache_ui = getattr(cached, "ui", None)
+                output_len = len(cache_outputs) if isinstance(cache_outputs, (list, tuple)) else None
+                ui_keys = sorted(cache_ui.keys()) if isinstance(cache_ui, dict) else None
+                logging.warning(
+                    "Output cache debug node=%s outputs_type=%s outputs_len=%s ui_keys=%s",
+                    node_id,
+                    type(cache_outputs).__name__,
+                    output_len,
+                    ui_keys,
+                )
         return outputs
 
     def _normalize_workflow_paths(self, workflow: Dict[str, Any]) -> None:
@@ -347,6 +366,37 @@ class ComfyApi:
     def _round_to_multiple(self, value: int, multiple: int) -> int:
         return int(math.ceil(value / multiple) * multiple)
 
+    def _resolve_scene_prompts(self, prompt: str, num_scene: Optional[int]) -> Tuple[List[str], int]:
+        prompts = [p.strip() for p in (prompt or "").split("¥")] if prompt else [""]
+        while len(prompts) > 1 and prompts[-1] == "":
+            prompts.pop()
+        if not prompts:
+            prompts = [""]
+
+        auto_scene_count = max(1, min(len(prompts), 4))
+        if num_scene is None:
+            scene_count = auto_scene_count
+        else:
+            try:
+                requested = int(num_scene)
+            except (TypeError, ValueError):
+                requested = auto_scene_count
+            requested = max(1, min(requested, 4))
+            # If caller forces multi-scene but the prompt only has one segment,
+            # default back to single-scene to avoid empty branch outputs.
+            if requested > 1 and auto_scene_count == 1:
+                logging.warning(
+                    "num_scene=%s requested with single-segment prompt; fallback to 1 scene",
+                    requested,
+                )
+                scene_count = 1
+            else:
+                scene_count = requested
+
+        while len(prompts) < scene_count:
+            prompts.append(prompts[-1])
+        return prompts, scene_count
+
     def _save_output_video(self, outputs: Dict[str, Any], output_path: str) -> str:
         video_exts = {".mp4", ".webm", ".mov", ".mkv", ".gif", ".webp"}
 
@@ -358,18 +408,68 @@ class ComfyApi:
                     return node_outputs[key][0]
             return None
 
+        def _normalize_candidate_path(path_value):
+            if path_value is None:
+                return None
+            try:
+                path = os.fspath(path_value)
+            except Exception:
+                return None
+            if not isinstance(path, str):
+                return None
+            path = path.strip()
+            if not path:
+                return None
+
+            if os.path.isabs(path):
+                return path if os.path.exists(path) else None
+
+            candidate_bases = (
+                self.folder_paths.get_output_directory(),
+                self.folder_paths.get_temp_directory(),
+                self.base_dir,
+            )
+            for base_dir in candidate_bases:
+                if not base_dir:
+                    continue
+                candidate = os.path.abspath(os.path.join(base_dir, path))
+                if os.path.exists(candidate):
+                    return candidate
+            return None
+
         def _extract_path_from_cached(value):
             # VideoCombine usually returns ((save_output, [file1, file2, ...]),)
             # in the node result cache. Walk recursively and pick the newest video.
             found = []
 
             def _walk(obj):
-                if isinstance(obj, str):
-                    lower = obj.lower()
-                    if os.path.splitext(lower)[1] in video_exts and os.path.exists(obj):
-                        found.append(obj)
+                normalized = _normalize_candidate_path(obj)
+                if normalized:
+                    lower = normalized.lower()
+                    if os.path.splitext(lower)[1] in video_exts:
+                        found.append(normalized)
+                    return
+                if hasattr(obj, "outputs") and hasattr(obj, "ui"):
+                    _walk(getattr(obj, "ui", None))
+                    _walk(getattr(obj, "outputs", None))
                     return
                 if isinstance(obj, dict):
+                    filename = obj.get("filename")
+                    if filename:
+                        subfolder = obj.get("subfolder") or ""
+                        folder_type = str(obj.get("type") or "").lower()
+                        base_dirs = []
+                        if folder_type == "temp":
+                            base_dirs.append(self.folder_paths.get_temp_directory())
+                        else:
+                            base_dirs.append(self.folder_paths.get_output_directory())
+                        for base_dir in base_dirs:
+                            if not base_dir:
+                                continue
+                            candidate = os.path.join(base_dir, subfolder, filename) if subfolder else os.path.join(base_dir, filename)
+                            candidate = _normalize_candidate_path(candidate)
+                            if candidate and os.path.splitext(candidate.lower())[1] in video_exts:
+                                found.append(candidate)
                     for v in obj.values():
                         _walk(v)
                     return
@@ -380,8 +480,17 @@ class ComfyApi:
             _walk(value)
             if not found:
                 return None
-            found = sorted(found, key=lambda p: os.path.getmtime(p))
+            found = sorted(set(found), key=lambda p: os.path.getmtime(p))
             return found[-1]
+
+        def _summarize_cache(value):
+            if value is None:
+                return "none"
+            cache_ui = getattr(value, "ui", None)
+            cache_outputs = getattr(value, "outputs", None)
+            ui_keys = sorted(cache_ui.keys()) if isinstance(cache_ui, dict) else None
+            outputs_len = len(cache_outputs) if isinstance(cache_outputs, (list, tuple)) else None
+            return f"type={type(value).__name__} ui_keys={ui_keys} outputs_type={type(cache_outputs).__name__} outputs_len={outputs_len}"
 
         mode = os.path.basename(output_path).split("_", 1)[0].lower()
         prefix_map = {
@@ -398,6 +507,7 @@ class ComfyApi:
                     cached = self.executor.caches.outputs.get(node_id)
                 except Exception:
                     cached = None
+                logging.warning("Output recovery inspect node=%s cache=%s", node_id, _summarize_cache(cached))
                 path = _extract_path_from_cached(cached)
                 if path:
                     logging.warning("Using cached node video output from node=%s path=%s", node_id, path)
@@ -409,12 +519,6 @@ class ComfyApi:
                 require_recent=True,
                 expected_prefixes=expected_prefixes,
             )
-            if not fallback:
-                # A cache-only run may not create a fresh output in this invocation.
-                fallback = self._find_latest_output_video(
-                    require_recent=False,
-                    expected_prefixes=expected_prefixes,
-                )
             if fallback:
                 logging.warning("Using fallback video output: %s", fallback)
                 os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -423,7 +527,7 @@ class ComfyApi:
             logging.warning(
                 "No fallback video found for prefixes=%s require_recent=%s",
                 expected_prefixes,
-                False,
+                True,
             )
 
         for _, node_outputs in outputs.items():
@@ -492,18 +596,11 @@ class ComfyApi:
         num_frames: int = 81,
         width: Optional[int] = None,
         height: Optional[int] = None,
-        num_scene: int = 1,
+        num_scene: Optional[int] = None,
         output_path: Optional[str] = None,
     ) -> str:
         seed = random.randint(0, 9999999999)
-        try:
-            num_scene = int(num_scene or 1)
-        except (TypeError, ValueError):
-            num_scene = 1
-        num_scene = max(1, min(num_scene, 4))
-        prompts = [p.strip() for p in (prompt or "").split("¥")] if prompt else [""]
-        while len(prompts) < num_scene:
-            prompts.append(prompts[-1] if prompts else "")
+        prompts, num_scene = self._resolve_scene_prompts(prompt, num_scene)
 
         vid_resolution = int(vid_resolution or 448)
         width = int(width) if width else 0
@@ -552,18 +649,11 @@ class ComfyApi:
         img_path: str,
         vid_resolution: int = 448,
         num_frames: int = 81,
-        num_scene: int = 1,
+        num_scene: Optional[int] = None,
         output_path: Optional[str] = None,
     ) -> str:
         seed = random.randint(0, 9999999999)
-        try:
-            num_scene = int(num_scene or 1)
-        except (TypeError, ValueError):
-            num_scene = 1
-        num_scene = max(1, min(num_scene, 4))
-        prompts = [p.strip() for p in (prompt or "").split("¥")] if prompt else [""]
-        while len(prompts) < num_scene:
-            prompts.append(prompts[-1] if prompts else "")
+        prompts, num_scene = self._resolve_scene_prompts(prompt, num_scene)
 
         uploaded_filename, copied_path = self._copy_to_input(img_path, prefix="i2v_img")
         try:
