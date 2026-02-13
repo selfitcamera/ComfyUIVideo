@@ -248,6 +248,8 @@ class ComfyApi:
     def _run_workflow(self, workflow: Dict[str, Any]) -> Dict[str, Any]:
         prompt_id = uuid.uuid4().hex
         self._last_run_started = time.time()
+        # Avoid cache-only runs returning empty history outputs.
+        self.executor.reset()
         execute_outputs = []
         missing_classes = set()
         for node_id, node in workflow.items():
@@ -288,7 +290,11 @@ class ComfyApi:
         self.executor.execute(workflow, prompt_id, extra_data={}, execute_outputs=execute_outputs)
         if not self.executor.success:
             raise RuntimeError("ComfyUI workflow execution failed")
-        return self.executor.history_result.get("outputs", {})
+        outputs = self.executor.history_result.get("outputs", {})
+        if not outputs:
+            events = [event for event, _ in getattr(self.executor, "status_messages", [])]
+            logging.warning("Workflow finished with empty outputs; status_events=%s", events[-8:])
+        return outputs
 
     def _normalize_workflow_paths(self, workflow: Dict[str, Any]) -> None:
         def _fix(value):
@@ -350,7 +356,10 @@ class ComfyApi:
             return None
 
         if not outputs:
-            fallback = self._find_latest_output_video()
+            fallback = self._find_latest_output_video(require_recent=True)
+            if not fallback:
+                # A cache-only run may not create a fresh output in this invocation.
+                fallback = self._find_latest_output_video(require_recent=False)
             if fallback:
                 os.makedirs(os.path.dirname(output_path), exist_ok=True)
                 shutil.copy(fallback, output_path)
@@ -372,7 +381,7 @@ class ComfyApi:
 
         raise KeyError(f"No video output found, outputs keys={list(outputs.keys())}")
 
-    def _find_latest_output_video(self) -> Optional[str]:
+    def _find_latest_output_video(self, require_recent: bool = True) -> Optional[str]:
         base_dir = self.folder_paths.get_output_directory()
         exts = {".mp4", ".webm", ".mov", ".mkv", ".gif", ".webp"}
         newest_path = None
@@ -387,7 +396,7 @@ class ComfyApi:
                     mtime = os.path.getmtime(path)
                 except OSError:
                     continue
-                if mtime < since:
+                if require_recent and mtime < since:
                     continue
                 if mtime > newest_mtime:
                     newest_mtime = mtime
