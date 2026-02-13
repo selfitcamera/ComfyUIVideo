@@ -355,15 +355,35 @@ class ComfyApi:
                     return node_outputs[key][0]
             return None
 
+        mode = os.path.basename(output_path).split("_", 1)[0].lower()
+        prefix_map = {
+            "t2v": ("omni_t2v",),
+            "i2v": ("omni_i2v",),
+            "v2v": ("omni_v2v",),
+        }
+        expected_prefixes = prefix_map.get(mode, ("omni_",))
+
         if not outputs:
-            fallback = self._find_latest_output_video(require_recent=True)
+            fallback = self._find_latest_output_video(
+                require_recent=True,
+                expected_prefixes=expected_prefixes,
+            )
             if not fallback:
                 # A cache-only run may not create a fresh output in this invocation.
-                fallback = self._find_latest_output_video(require_recent=False)
+                fallback = self._find_latest_output_video(
+                    require_recent=False,
+                    expected_prefixes=expected_prefixes,
+                )
             if fallback:
+                logging.warning("Using fallback video output: %s", fallback)
                 os.makedirs(os.path.dirname(output_path), exist_ok=True)
                 shutil.copy(fallback, output_path)
                 return output_path
+            logging.warning(
+                "No fallback video found for prefixes=%s require_recent=%s",
+                expected_prefixes,
+                False,
+            )
 
         for _, node_outputs in outputs.items():
             video_entry = _extract_video_entry(node_outputs)
@@ -381,18 +401,20 @@ class ComfyApi:
 
         raise KeyError(f"No video output found, outputs keys={list(outputs.keys())}")
 
-    def _find_latest_output_video(self, require_recent: bool = True) -> Optional[str]:
+    def _find_latest_output_video(
+        self,
+        require_recent: bool = True,
+        expected_prefixes: Optional[Tuple[str, ...]] = None,
+    ) -> Optional[str]:
         candidate_dirs = [
             self.folder_paths.get_output_directory(),
             self.folder_paths.get_temp_directory(),
-            os.path.join(self.base_dir, "output"),
-            os.path.join(self.base_dir, "temp"),
-            os.getcwd(),
         ]
         exts = {".mp4", ".webm", ".mov", ".mkv", ".gif", ".webp"}
         newest_path = None
         newest_mtime = 0.0
         since = getattr(self, "_last_run_started", 0) - 5
+        prefixes = tuple(p.lower() for p in (expected_prefixes or ()))
         seen_dirs = set()
         for base_dir in candidate_dirs:
             if not base_dir:
@@ -404,6 +426,8 @@ class ComfyApi:
             for root, _, files in os.walk(base_dir):
                 for name in files:
                     if os.path.splitext(name)[1].lower() not in exts:
+                        continue
+                    if prefixes and not any(name.lower().startswith(p) for p in prefixes):
                         continue
                     path = os.path.join(root, name)
                     try:
