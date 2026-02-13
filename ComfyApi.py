@@ -280,20 +280,20 @@ class ComfyApi:
                 "No OUTPUT_NODE detected; fallback to execute all nodes. missing_classes=%s",
                 sorted(missing_classes),
             )
-        else:
-            logging.info(
-                "Workflow execute outputs=%s missing_classes=%s",
-                execute_outputs[:8],
-                sorted(missing_classes),
-            )
+        logging.warning(
+            "Workflow execute outputs=%s (count=%d) missing_classes=%s",
+            execute_outputs[:8],
+            len(execute_outputs),
+            sorted(missing_classes),
+        )
 
         self.executor.execute(workflow, prompt_id, extra_data={}, execute_outputs=execute_outputs)
         if not self.executor.success:
             raise RuntimeError("ComfyUI workflow execution failed")
         outputs = self.executor.history_result.get("outputs", {})
         if not outputs:
-            events = [event for event, _ in getattr(self.executor, "status_messages", [])]
-            logging.warning("Workflow finished with empty outputs; status_events=%s", events[-8:])
+            status_tail = getattr(self.executor, "status_messages", [])[-8:]
+            logging.warning("Workflow finished with empty outputs; status_tail=%s", status_tail)
         return outputs
 
     def _normalize_workflow_paths(self, workflow: Dict[str, Any]) -> None:
@@ -382,25 +382,39 @@ class ComfyApi:
         raise KeyError(f"No video output found, outputs keys={list(outputs.keys())}")
 
     def _find_latest_output_video(self, require_recent: bool = True) -> Optional[str]:
-        base_dir = self.folder_paths.get_output_directory()
+        candidate_dirs = [
+            self.folder_paths.get_output_directory(),
+            self.folder_paths.get_temp_directory(),
+            os.path.join(self.base_dir, "output"),
+            os.path.join(self.base_dir, "temp"),
+            os.getcwd(),
+        ]
         exts = {".mp4", ".webm", ".mov", ".mkv", ".gif", ".webp"}
         newest_path = None
         newest_mtime = 0.0
         since = getattr(self, "_last_run_started", 0) - 5
-        for root, _, files in os.walk(base_dir):
-            for name in files:
-                if os.path.splitext(name)[1].lower() not in exts:
-                    continue
-                path = os.path.join(root, name)
-                try:
-                    mtime = os.path.getmtime(path)
-                except OSError:
-                    continue
-                if require_recent and mtime < since:
-                    continue
-                if mtime > newest_mtime:
-                    newest_mtime = mtime
-                    newest_path = path
+        seen_dirs = set()
+        for base_dir in candidate_dirs:
+            if not base_dir:
+                continue
+            base_dir = os.path.abspath(base_dir)
+            if base_dir in seen_dirs or not os.path.isdir(base_dir):
+                continue
+            seen_dirs.add(base_dir)
+            for root, _, files in os.walk(base_dir):
+                for name in files:
+                    if os.path.splitext(name)[1].lower() not in exts:
+                        continue
+                    path = os.path.join(root, name)
+                    try:
+                        mtime = os.path.getmtime(path)
+                    except OSError:
+                        continue
+                    if require_recent and mtime < since:
+                        continue
+                    if mtime > newest_mtime:
+                        newest_mtime = mtime
+                        newest_path = path
         return newest_path
 
     # ------------------------------------------------------------------
