@@ -287,6 +287,7 @@ class ComfyApi:
             sorted(missing_classes),
         )
 
+        self._last_execute_outputs = list(execute_outputs)
         self.executor.execute(workflow, prompt_id, extra_data={}, execute_outputs=execute_outputs)
         if not self.executor.success:
             raise RuntimeError("ComfyUI workflow execution failed")
@@ -347,6 +348,8 @@ class ComfyApi:
         return int(math.ceil(value / multiple) * multiple)
 
     def _save_output_video(self, outputs: Dict[str, Any], output_path: str) -> str:
+        video_exts = {".mp4", ".webm", ".mov", ".mkv", ".gif", ".webp"}
+
         def _extract_video_entry(node_outputs: Optional[Dict[str, Any]]):
             if not isinstance(node_outputs, dict):
                 return None
@@ -354,6 +357,31 @@ class ComfyApi:
                 if key in node_outputs and node_outputs[key]:
                     return node_outputs[key][0]
             return None
+
+        def _extract_path_from_cached(value):
+            # VideoCombine usually returns ((save_output, [file1, file2, ...]),)
+            # in the node result cache. Walk recursively and pick the newest video.
+            found = []
+
+            def _walk(obj):
+                if isinstance(obj, str):
+                    lower = obj.lower()
+                    if os.path.splitext(lower)[1] in video_exts and os.path.exists(obj):
+                        found.append(obj)
+                    return
+                if isinstance(obj, dict):
+                    for v in obj.values():
+                        _walk(v)
+                    return
+                if isinstance(obj, (list, tuple)):
+                    for v in obj:
+                        _walk(v)
+
+            _walk(value)
+            if not found:
+                return None
+            found = sorted(found, key=lambda p: os.path.getmtime(p))
+            return found[-1]
 
         mode = os.path.basename(output_path).split("_", 1)[0].lower()
         prefix_map = {
@@ -364,6 +392,19 @@ class ComfyApi:
         expected_prefixes = prefix_map.get(mode, ("omni_",))
 
         if not outputs:
+            # Try extracting file path directly from node cache when UI outputs are empty.
+            for node_id in getattr(self, "_last_execute_outputs", []):
+                try:
+                    cached = self.executor.caches.outputs.get(node_id)
+                except Exception:
+                    cached = None
+                path = _extract_path_from_cached(cached)
+                if path:
+                    logging.warning("Using cached node video output from node=%s path=%s", node_id, path)
+                    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                    shutil.copy(path, output_path)
+                    return output_path
+
             fallback = self._find_latest_output_video(
                 require_recent=True,
                 expected_prefixes=expected_prefixes,
