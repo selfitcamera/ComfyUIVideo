@@ -17,7 +17,7 @@ from PIL import Image
 
 from src.model_names import resolve_placeholders
 
-COMFY_API_BUILD = "2026-02-14-96dd8af"
+COMFY_API_BUILD = "2026-02-14-scene-bypass-v2"
 
 
 class _LocalServer:
