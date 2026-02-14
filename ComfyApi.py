@@ -16,7 +16,7 @@ from PIL import Image
 
 from src.model_names import resolve_placeholders
 
-COMFY_API_BUILD = "2026-02-14-d653cc3"
+COMFY_API_BUILD = "2026-02-14-42f3076"
 
 
 class _LocalServer:
