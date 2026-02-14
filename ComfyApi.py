@@ -16,6 +16,8 @@ from PIL import Image
 
 from src.model_names import resolve_placeholders
 
+COMFY_API_BUILD = "2026-02-14-8980de4"
+
 
 class _LocalServer:
     """Minimal server stub for PromptExecutor."""
@@ -42,6 +44,7 @@ class ComfyApi:
         workflows_dir: Optional[str] = None,
         preload_models: bool = True,
     ) -> None:
+        logging.warning("ComfyApi build=%s", COMFY_API_BUILD)
         self.base_dir = base_dir or os.path.dirname(os.path.abspath(__file__))
         self.workflows_dir = workflows_dir or os.path.abspath(
             os.path.join(self.base_dir, "..", "workflows")
