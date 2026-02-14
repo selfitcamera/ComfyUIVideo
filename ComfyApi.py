@@ -17,7 +17,7 @@ from PIL import Image
 
 from src.model_names import resolve_placeholders
 
-COMFY_API_BUILD = "2026-02-14-a995753"
+COMFY_API_BUILD = "2026-02-14-scene-bypass"
 
 
 class _LocalServer:
@@ -295,6 +295,8 @@ class ComfyApi:
         self._last_execute_outputs = list(execute_outputs)
         self.executor.execute(workflow, prompt_id, extra_data={}, execute_outputs=execute_outputs)
         if not self.executor.success:
+            status_tail = getattr(self.executor, "status_messages", [])[-8:]
+            logging.error("Workflow execution failed; status_tail=%s", status_tail)
             raise RuntimeError("ComfyUI workflow execution failed")
         outputs = self.executor.history_result.get("outputs", {})
         if not outputs:
@@ -393,6 +395,9 @@ class ComfyApi:
     def _summarize_value(self, value, depth: int = 0) -> str:
         if value is None:
             return "None"
+        message = getattr(value, "message", None)
+        if message is not None and type(value).__name__ == "ExecutionBlocker":
+            return f"ExecutionBlocker(message={message!r})"
         if depth >= 2:
             return type(value).__name__
         if isinstance(value, (str, int, float, bool)):
@@ -408,9 +413,6 @@ class ComfyApi:
             return f"{type(value).__name__}(len={len(value)}, sample={sample})"
         if hasattr(value, "shape"):
             return f"{type(value).__name__}(shape={getattr(value, 'shape', None)})"
-        message = getattr(value, "message", None)
-        if message is not None and type(value).__name__ == "ExecutionBlocker":
-            return f"ExecutionBlocker(message={message!r})"
         return type(value).__name__
 
     def _debug_upstream_for_output_node(self, output_node_id: str, max_depth: int = 4, max_nodes: int = 24) -> None:
@@ -732,6 +734,23 @@ class ComfyApi:
             workflow["1338"]["inputs"]["index"] = 1 if num_scene > 3 else 0
         if "1322" in workflow and "index" in workflow["1322"]["inputs"]:
             workflow["1322"]["inputs"]["index"] = num_scene - 1
+        selector_inputs = workflow.get("1322", {}).get("inputs", {})
+        selector_index = selector_inputs.get("index")
+        selector_key = f"value{selector_index}" if isinstance(selector_index, int) else None
+        selector_link = selector_inputs.get(selector_key) if selector_key else None
+        logging.warning(
+            "T2V scene routing num_scene=%s gate_index={1318:%s,1321:%s,1338:%s} selector={1322:%s %s:%s}",
+            num_scene,
+            workflow.get("1318", {}).get("inputs", {}).get("index"),
+            workflow.get("1321", {}).get("inputs", {}).get("index"),
+            workflow.get("1338", {}).get("inputs", {}).get("index"),
+            selector_index,
+            selector_key,
+            selector_link,
+        )
+        if num_scene == 1 and "1039" in workflow and "1252:1249" in workflow:
+            workflow["1039"]["inputs"]["images"] = ["1252:1249", 0]
+            logging.warning("T2V single-scene bypass enabled: 1039.images -> ['1252:1249', 0]")
         if width > 0 and height > 0:
             workflow["97"]["inputs"]["width"] = width
             workflow["97"]["inputs"]["height"] = height
@@ -786,6 +805,23 @@ class ComfyApi:
                 workflow["1300"]["inputs"]["index"] = 1 if num_scene > 3 else 0
             if "1287" in workflow and "index" in workflow["1287"]["inputs"]:
                 workflow["1287"]["inputs"]["index"] = num_scene - 1
+            selector_inputs = workflow.get("1287", {}).get("inputs", {})
+            selector_index = selector_inputs.get("index")
+            selector_key = f"value{selector_index}" if isinstance(selector_index, int) else None
+            selector_link = selector_inputs.get(selector_key) if selector_key else None
+            logging.warning(
+                "I2V scene routing num_scene=%s gate_index={1281:%s,1288:%s,1300:%s} selector={1287:%s %s:%s}",
+                num_scene,
+                workflow.get("1281", {}).get("inputs", {}).get("index"),
+                workflow.get("1288", {}).get("inputs", {}).get("index"),
+                workflow.get("1300", {}).get("inputs", {}).get("index"),
+                selector_index,
+                selector_key,
+                selector_link,
+            )
+            if num_scene == 1 and "1039" in workflow and "1252:1249" in workflow:
+                workflow["1039"]["inputs"]["images"] = ["1252:1249", 0]
+                logging.warning("I2V single-scene bypass enabled: 1039.images -> ['1252:1249', 0]")
 
             outputs = self._run_workflow(workflow)
         finally:
