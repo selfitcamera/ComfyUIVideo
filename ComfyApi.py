@@ -17,7 +17,7 @@ from PIL import Image
 
 from src.model_names import resolve_placeholders
 
-COMFY_API_BUILD = "2026-02-14-scene-bypass-v2"
+COMFY_API_BUILD = "2026-02-14-scene-direct-map"
 
 
 class _LocalServer:
@@ -748,9 +748,20 @@ class ComfyApi:
             selector_key,
             selector_link,
         )
-        if num_scene == 1 and "1039" in workflow and "1252:1249" in workflow:
-            workflow["1039"]["inputs"]["images"] = ["1252:1249", 0]
-            logging.warning("T2V single-scene bypass enabled: 1039.images -> ['1252:1249', 0]")
+        t2v_scene_output_map = {
+            1: "1252:1249",
+            2: "1262:1253",
+            3: "1312:1263",
+            4: "1335:1263",
+        }
+        target_node_id = t2v_scene_output_map.get(num_scene)
+        if target_node_id and "1039" in workflow and target_node_id in workflow:
+            workflow["1039"]["inputs"]["images"] = [target_node_id, 0]
+            logging.warning(
+                "T2V scene direct map enabled: num_scene=%s 1039.images -> %s",
+                num_scene,
+                [target_node_id, 0],
+            )
         if width > 0 and height > 0:
             workflow["97"]["inputs"]["width"] = width
             workflow["97"]["inputs"]["height"] = height
@@ -819,9 +830,20 @@ class ComfyApi:
                 selector_key,
                 selector_link,
             )
-            if num_scene == 1 and "1039" in workflow and "1252:1249" in workflow:
-                workflow["1039"]["inputs"]["images"] = ["1252:1249", 0]
-                logging.warning("I2V single-scene bypass enabled: 1039.images -> ['1252:1249', 0]")
+            i2v_scene_output_map = {
+                1: "1252:1249",
+                2: "1262:1253",
+                3: "1301:1253",
+                4: "1313:1253",
+            }
+            target_node_id = i2v_scene_output_map.get(num_scene)
+            if target_node_id and "1039" in workflow and target_node_id in workflow:
+                workflow["1039"]["inputs"]["images"] = [target_node_id, 0]
+                logging.warning(
+                    "I2V scene direct map enabled: num_scene=%s 1039.images -> %s",
+                    num_scene,
+                    [target_node_id, 0],
+                )
 
             outputs = self._run_workflow(workflow)
         finally:
