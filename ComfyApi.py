@@ -9,6 +9,7 @@ import time
 import asyncio
 import inspect
 import logging
+from collections import deque
 from typing import Dict, Any, List, Tuple, Optional
 
 import cv2
@@ -16,7 +17,7 @@ from PIL import Image
 
 from src.model_names import resolve_placeholders
 
-COMFY_API_BUILD = "2026-02-14-3bfd44e"
+COMFY_API_BUILD = "2026-02-14-1850dd1"
 
 
 class _LocalServer:
@@ -251,6 +252,7 @@ class ComfyApi:
     def _run_workflow(self, workflow: Dict[str, Any]) -> Dict[str, Any]:
         prompt_id = uuid.uuid4().hex
         self._last_run_started = time.time()
+        self._last_workflow = workflow
         # Avoid cache-only runs returning empty history outputs.
         self.executor.reset()
         execute_outputs = []
@@ -317,6 +319,13 @@ class ComfyApi:
                     output_len,
                     ui_keys,
                 )
+                logging.warning(
+                    "Output cache payload node=%s payload=%s",
+                    node_id,
+                    self._summarize_value(cache_outputs),
+                )
+            for node_id in self._last_execute_outputs[:2]:
+                self._debug_upstream_for_output_node(node_id, max_depth=4, max_nodes=24)
         return outputs
 
     def _normalize_workflow_paths(self, workflow: Dict[str, Any]) -> None:
@@ -368,6 +377,93 @@ class ComfyApi:
 
     def _round_to_multiple(self, value: int, multiple: int) -> int:
         return int(math.ceil(value / multiple) * multiple)
+
+    def _summarize_cache_entry(self, value) -> str:
+        if value is None:
+            return "none"
+        cache_ui = getattr(value, "ui", None)
+        cache_outputs = getattr(value, "outputs", None)
+        ui_keys = sorted(cache_ui.keys()) if isinstance(cache_ui, dict) else None
+        outputs_len = len(cache_outputs) if isinstance(cache_outputs, (list, tuple)) else None
+        return (
+            f"type={type(value).__name__} ui_keys={ui_keys} "
+            f"outputs_type={type(cache_outputs).__name__} outputs_len={outputs_len}"
+        )
+
+    def _summarize_value(self, value, depth: int = 0) -> str:
+        if value is None:
+            return "None"
+        if depth >= 2:
+            return type(value).__name__
+        if isinstance(value, (str, int, float, bool)):
+            text = repr(value)
+            if len(text) > 120:
+                text = text[:117] + "..."
+            return f"{type(value).__name__}({text})"
+        if isinstance(value, dict):
+            keys = list(value.keys())[:8]
+            return f"dict(keys={keys})"
+        if isinstance(value, (list, tuple)):
+            sample = [self._summarize_value(v, depth + 1) for v in value[:3]]
+            return f"{type(value).__name__}(len={len(value)}, sample={sample})"
+        if hasattr(value, "shape"):
+            return f"{type(value).__name__}(shape={getattr(value, 'shape', None)})"
+        message = getattr(value, "message", None)
+        if message is not None and type(value).__name__ == "ExecutionBlocker":
+            return f"ExecutionBlocker(message={message!r})"
+        return type(value).__name__
+
+    def _debug_upstream_for_output_node(self, output_node_id: str, max_depth: int = 4, max_nodes: int = 24) -> None:
+        workflow = getattr(self, "_last_workflow", None)
+        if not isinstance(workflow, dict):
+            return
+        if output_node_id not in workflow:
+            return
+        queue = deque([(output_node_id, 0, "output")])
+        seen = set()
+        visited = 0
+        while queue and visited < max_nodes:
+            node_id, depth, via = queue.popleft()
+            if node_id in seen:
+                continue
+            seen.add(node_id)
+            visited += 1
+
+            node = workflow.get(node_id, {})
+            class_type = node.get("class_type")
+            inputs = node.get("inputs", {}) if isinstance(node, dict) else {}
+            try:
+                cached = self.executor.caches.outputs.get(node_id)
+            except Exception:
+                cached = None
+            cache_outputs = getattr(cached, "outputs", None) if cached is not None else None
+            logging.warning(
+                "Output upstream node=%s depth=%d via=%s class=%s cache=%s payload=%s",
+                node_id,
+                depth,
+                via,
+                class_type,
+                self._summarize_cache_entry(cached),
+                self._summarize_value(cache_outputs),
+            )
+
+            if depth >= max_depth or not isinstance(inputs, dict):
+                continue
+            for input_name, input_value in inputs.items():
+                if (
+                    isinstance(input_value, list)
+                    and len(input_value) >= 2
+                    and isinstance(input_value[0], str)
+                ):
+                    parent_id = input_value[0]
+                    if parent_id not in seen:
+                        queue.append((parent_id, depth + 1, input_name))
+        if visited >= max_nodes:
+            logging.warning(
+                "Output upstream traversal truncated for node=%s at max_nodes=%d",
+                output_node_id,
+                max_nodes,
+            )
 
     def _resolve_scene_prompts(self, prompt: str, num_scene: Optional[int]) -> Tuple[List[str], int]:
         prompts = [p.strip() for p in (prompt or "").split("¥")] if prompt else [""]
@@ -486,15 +582,6 @@ class ComfyApi:
             found = sorted(set(found), key=lambda p: os.path.getmtime(p))
             return found[-1]
 
-        def _summarize_cache(value):
-            if value is None:
-                return "none"
-            cache_ui = getattr(value, "ui", None)
-            cache_outputs = getattr(value, "outputs", None)
-            ui_keys = sorted(cache_ui.keys()) if isinstance(cache_ui, dict) else None
-            outputs_len = len(cache_outputs) if isinstance(cache_outputs, (list, tuple)) else None
-            return f"type={type(value).__name__} ui_keys={ui_keys} outputs_type={type(cache_outputs).__name__} outputs_len={outputs_len}"
-
         mode = os.path.basename(output_path).split("_", 1)[0].lower()
         prefix_map = {
             "t2v": ("omni_t2v",),
@@ -510,13 +597,19 @@ class ComfyApi:
                     cached = self.executor.caches.outputs.get(node_id)
                 except Exception:
                     cached = None
-                logging.warning("Output recovery inspect node=%s cache=%s", node_id, _summarize_cache(cached))
+                logging.warning("Output recovery inspect node=%s cache=%s", node_id, self._summarize_cache_entry(cached))
                 path = _extract_path_from_cached(cached)
                 if path:
                     logging.warning("Using cached node video output from node=%s path=%s", node_id, path)
                     os.makedirs(os.path.dirname(output_path), exist_ok=True)
                     shutil.copy(path, output_path)
                     return output_path
+                if cached is not None:
+                    logging.warning(
+                        "Output recovery payload node=%s payload=%s",
+                        node_id,
+                        self._summarize_value(getattr(cached, "outputs", None)),
+                    )
 
             fallback = self._find_latest_output_video(
                 require_recent=True,
@@ -532,6 +625,8 @@ class ComfyApi:
                 expected_prefixes,
                 True,
             )
+            for node_id in getattr(self, "_last_execute_outputs", [])[:2]:
+                self._debug_upstream_for_output_node(node_id, max_depth=4, max_nodes=24)
 
         for _, node_outputs in outputs.items():
             video_entry = _extract_video_entry(node_outputs)
