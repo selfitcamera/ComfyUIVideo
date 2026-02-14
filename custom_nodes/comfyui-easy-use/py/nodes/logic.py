@@ -367,8 +367,12 @@ class anythingInversedSwitch:
             "hidden": {"unique_id": "UNIQUE_ID"},
         }
 
-    RETURN_TYPES = ByPassTypeTuple(tuple([any_type]))
-    RETURN_NAMES = ByPassTypeTuple(tuple(["out0"]))
+    # This node is used as a multi-output gate (workflows often connect to output index 1+).
+    # Returning only a single declared output causes downstream links (e.g. [node_id, 1])
+    # to be treated as missing, which becomes `None` and later crashes nodes expecting
+    # a sequence (e.g. VHS_SelectImages calls len()).
+    RETURN_TYPES = ByPassTypeTuple(tuple([any_type] * MAX_FLOW_NUM))
+    RETURN_NAMES = ByPassTypeTuple(tuple([f"out{i}" for i in range(MAX_FLOW_NUM)]))
     FUNCTION = "switch"
 
     CATEGORY = "EasyUse/Logic"
@@ -382,7 +386,7 @@ class anythingInversedSwitch:
                 res.append(kwargs['in'])
             else:
                 res.append(ExecutionBlocker(None))
-        return res
+        return tuple(res)
 
 
 class anythingIndexSwitch:
@@ -1808,4 +1812,3 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "easy saveText": "Save Text",
     "easy sleep": "Sleep",
 }
-
