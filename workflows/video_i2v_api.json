@@ -1,0 +1,1030 @@
+{
+  "97": {
+    "inputs": {
+      "image": "1704784445205639741_1_ainote_new.jpg"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
+  "604": {
+    "inputs": {
+      "value": 1.3
+    },
+    "class_type": "FloatConstant",
+    "_meta": {
+      "title": "motion amplitude"
+    }
+  },
+  "605": {
+    "inputs": {
+      "value": 10
+    },
+    "class_type": "INTConstant",
+    "_meta": {
+      "title": "motion_frames"
+    }
+  },
+  "606": {
+    "inputs": {
+      "value": 0.05
+    },
+    "class_type": "FloatConstant",
+    "_meta": {
+      "title": "color protect strength"
+    }
+  },
+  "607": {
+    "inputs": {
+      "desired_width": 768,
+      "desired_height": 768,
+      "divisible_by": 16,
+      "upscale": false,
+      "upscale_method": "lanczos",
+      "small_image_mode": "none",
+      "pad_color": "#000000",
+      "image": [
+        "97",
+        0
+      ]
+    },
+    "class_type": "FindPerfectResolution",
+    "_meta": {
+      "title": "Find Perfect Resolution"
+    }
+  },
+  "608": {
+    "inputs": {
+      "value": 81
+    },
+    "class_type": "INTConstant",
+    "_meta": {
+      "title": "lenght"
+    }
+  },
+  "916": {
+    "inputs": {
+      "vae_name": "wan_2.1_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "919": {
+    "inputs": {
+      "unet_name": "wan22EnhancedNSFWCameraPrompt_nsfwFASTMOVEV2Q6KH.gguf"
+    },
+    "class_type": "UnetLoaderGGUF",
+    "_meta": {
+      "title": "Unet Loader (GGUF) HIGH"
+    }
+  },
+  "920": {
+    "inputs": {
+      "unet_name": "wan22EnhancedNSFWCameraPrompt_nsfwFASTMOVEV2Q6KL.gguf"
+    },
+    "class_type": "UnetLoaderGGUF",
+    "_meta": {
+      "title": "Unet Loader (GGUF) LOW"
+    }
+  },
+  "921": {
+    "inputs": {
+      "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "type": "wan",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "1039": {
+    "inputs": {
+      "frame_rate": 16,
+      "loop_count": 0,
+      "filename_prefix": "wan22_12_22-44-17",
+      "format": "video/h264-mp4",
+      "pix_fmt": "yuv420p",
+      "crf": 18,
+      "save_metadata": true,
+      "trim_to_audio": false,
+      "pingpong": false,
+      "save_output": true,
+      "images": [
+        "1287",
+        0
+      ]
+    },
+    "class_type": "VHS_VideoCombine",
+    "_meta": {
+      "title": "16FPS"
+    }
+  },
+  "1281": {
+    "inputs": {
+      "index": 1,
+      "in": [
+        "1252:1249",
+        0
+      ]
+    },
+    "class_type": "easy anythingInversedSwitch",
+    "_meta": {
+      "title": "Any Inversed Switch 1_2"
+    }
+  },
+  "1287": {
+    "inputs": {
+      "index": 3,
+      "value0": [
+        "1281",
+        0
+      ],
+      "value1": [
+        "1288",
+        0
+      ],
+      "value2": [
+        "1300",
+        0
+      ],
+      "value3": [
+        "1313:1253",
+        0
+      ]
+    },
+    "class_type": "easy anythingIndexSwitch",
+    "_meta": {
+      "title": "Any Index Switch"
+    }
+  },
+  "1288": {
+    "inputs": {
+      "index": 1,
+      "in": [
+        "1262:1253",
+        0
+      ]
+    },
+    "class_type": "easy anythingInversedSwitch",
+    "_meta": {
+      "title": "Any Inversed Switch 2_3"
+    }
+  },
+  "1300": {
+    "inputs": {
+      "index": 1,
+      "in": [
+        "1301:1253",
+        0
+      ]
+    },
+    "class_type": "easy anythingInversedSwitch",
+    "_meta": {
+      "title": "Any Inversed Switch 3_4"
+    }
+  },
+  "1252:1250": {
+    "inputs": {
+      "seed": -1
+    },
+    "class_type": "Seed (rgthree)",
+    "_meta": {
+      "title": "1-Seed high"
+    }
+  },
+  "1252:1239": {
+    "inputs": {
+      "add_noise": "disable",
+      "noise_seed": 0,
+      "steps": 4,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "start_at_step": 2,
+      "end_at_step": 100,
+      "return_with_leftover_noise": "disable",
+      "model": [
+        "1252:1247",
+        0
+      ],
+      "positive": [
+        "1252:1248",
+        2
+      ],
+      "negative": [
+        "1252:1248",
+        3
+      ],
+      "latent_image": [
+        "1252:1238",
+        0
+      ]
+    },
+    "class_type": "KSamplerAdvanced",
+    "_meta": {
+      "title": "2-KSampler (Advanced) LOW"
+    }
+  },
+  "1252:1244": {
+    "inputs": {
+      "text": "她坐直了起来,左右看了看，确定没有人后；面向镜头，把头发扎了起来，含情脉脉，诱惑十足；，",
+      "clip": [
+        "921",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "first prompt"
+    }
+  },
+  "1252:1245": {
+    "inputs": {
+      "text": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走",
+      "clip": [
+        "921",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Negative Prompt)"
+    }
+  },
+  "1252:1246": {
+    "inputs": {
+      "shift": 5.000000000000001,
+      "model": [
+        "919",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingSD3",
+    "_meta": {
+      "title": "ModelSamplingSD3 HIGH"
+    }
+  },
+  "1252:1247": {
+    "inputs": {
+      "shift": 5.000000000000001,
+      "model": [
+        "920",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingSD3",
+    "_meta": {
+      "title": "ModelSamplingSD3 LOW"
+    }
+  },
+  "1252:1248": {
+    "inputs": {
+      "width": [
+        "607",
+        0
+      ],
+      "height": [
+        "607",
+        1
+      ],
+      "length": [
+        "608",
+        0
+      ],
+      "batch_size": 1,
+      "motion_amplitude": [
+        "604",
+        0
+      ],
+      "color_protect": true,
+      "correct_strength": [
+        "606",
+        0
+      ],
+      "positive": [
+        "1252:1244",
+        0
+      ],
+      "negative": [
+        "1252:1245",
+        0
+      ],
+      "vae": [
+        "916",
+        0
+      ],
+      "start_image": [
+        "97",
+        0
+      ]
+    },
+    "class_type": "PainterI2VAdvanced",
+    "_meta": {
+      "title": "PainterI2VAdvanced"
+    }
+  },
+  "1252:1249": {
+    "inputs": {
+      "samples": [
+        "1252:1239",
+        0
+      ],
+      "vae": [
+        "916",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "1252:1238": {
+    "inputs": {
+      "add_noise": "enable",
+      "noise_seed": [
+        "1252:1250",
+        0
+      ],
+      "steps": 4,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "start_at_step": 0,
+      "end_at_step": 2,
+      "return_with_leftover_noise": "enable",
+      "model": [
+        "1252:1246",
+        0
+      ],
+      "positive": [
+        "1252:1248",
+        0
+      ],
+      "negative": [
+        "1252:1248",
+        1
+      ],
+      "latent_image": [
+        "1252:1248",
+        4
+      ]
+    },
+    "class_type": "KSamplerAdvanced",
+    "_meta": {
+      "title": "1-KSampler (Advanced) HIGH"
+    }
+  },
+  "1262:1253": {
+    "inputs": {
+      "inputcount": 2,
+      "Update inputs": null,
+      "image_1": [
+        "1281",
+        1
+      ],
+      "image_2": [
+        "1262:1258",
+        0
+      ]
+    },
+    "class_type": "ImageBatchMulti",
+    "_meta": {
+      "title": "Image Batch Multi"
+    }
+  },
+  "1262:1255": {
+    "inputs": {
+      "add_noise": "disable",
+      "noise_seed": 0,
+      "steps": 4,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "start_at_step": 2,
+      "end_at_step": 100,
+      "return_with_leftover_noise": "disable",
+      "model": [
+        "1252:1247",
+        0
+      ],
+      "positive": [
+        "1262:1256",
+        0
+      ],
+      "negative": [
+        "1262:1256",
+        1
+      ],
+      "latent_image": [
+        "1262:1254",
+        0
+      ]
+    },
+    "class_type": "KSamplerAdvanced",
+    "_meta": {
+      "title": "2-KSampler (Advanced) LOW"
+    }
+  },
+  "1262:1256": {
+    "inputs": {
+      "width": [
+        "607",
+        0
+      ],
+      "height": [
+        "607",
+        1
+      ],
+      "length": [
+        "608",
+        0
+      ],
+      "batch_size": 1,
+      "motion_frames": [
+        "605",
+        0
+      ],
+      "motion_amplitude": [
+        "604",
+        0
+      ],
+      "positive": [
+        "1262:1257",
+        0
+      ],
+      "negative": [
+        "1262:1259",
+        0
+      ],
+      "vae": [
+        "916",
+        0
+      ],
+      "previous_video": [
+        "1262:1260",
+        0
+      ],
+      "initial_reference_image": [
+        "97",
+        0
+      ]
+    },
+    "class_type": "PainterLongVideo",
+    "_meta": {
+      "title": "2-PainterLongVideo"
+    }
+  },
+  "1262:1257": {
+    "inputs": {
+      "text": "头发扎好，然后她面向镜头，爬了过来",
+      "clip": [
+        "921",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "second prompt"
+    }
+  },
+  "1262:1258": {
+    "inputs": {
+      "samples": [
+        "1262:1255",
+        0
+      ],
+      "vae": [
+        "916",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "1262:1259": {
+    "inputs": {
+      "text": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走",
+      "clip": [
+        "921",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Negative Prompt)"
+    }
+  },
+  "1262:1260": {
+    "inputs": {
+      "upscale_method": "nearest-exact",
+      "scale_by": 2,
+      "image": [
+        "1262:1261",
+        0
+      ]
+    },
+    "class_type": "ImageScaleBy",
+    "_meta": {
+      "title": "Upscale Image By"
+    }
+  },
+  "1262:1261": {
+    "inputs": {
+      "indexes": "-1",
+      "err_if_missing": true,
+      "err_if_empty": true,
+      "image": [
+        "1281",
+        1
+      ]
+    },
+    "class_type": "VHS_SelectImages",
+    "_meta": {
+      "title": "Select Images 🎥🅥🅗🅢"
+    }
+  },
+  "1262:308": {
+    "inputs": {
+      "seed": -1
+    },
+    "class_type": "Seed (rgthree)",
+    "_meta": {
+      "title": "2-Seed high"
+    }
+  },
+  "1262:1254": {
+    "inputs": {
+      "add_noise": "enable",
+      "noise_seed": [
+        "1262:308",
+        0
+      ],
+      "steps": 4,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "start_at_step": 0,
+      "end_at_step": 2,
+      "return_with_leftover_noise": "enable",
+      "model": [
+        "1252:1246",
+        0
+      ],
+      "positive": [
+        "1262:1256",
+        0
+      ],
+      "negative": [
+        "1262:1256",
+        1
+      ],
+      "latent_image": [
+        "1262:1256",
+        2
+      ]
+    },
+    "class_type": "KSamplerAdvanced",
+    "_meta": {
+      "title": "2-KSampler (Advanced) HIGH"
+    }
+  },
+  "1301:1253": {
+    "inputs": {
+      "inputcount": 2,
+      "Update inputs": null,
+      "image_1": [
+        "1288",
+        1
+      ],
+      "image_2": [
+        "1301:1258",
+        0
+      ]
+    },
+    "class_type": "ImageBatchMulti",
+    "_meta": {
+      "title": "Image Batch Multi"
+    }
+  },
+  "1301:1255": {
+    "inputs": {
+      "add_noise": "disable",
+      "noise_seed": 0,
+      "steps": 4,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "start_at_step": 2,
+      "end_at_step": 100,
+      "return_with_leftover_noise": "disable",
+      "model": [
+        "1252:1247",
+        0
+      ],
+      "positive": [
+        "1301:1256",
+        0
+      ],
+      "negative": [
+        "1301:1256",
+        1
+      ],
+      "latent_image": [
+        "1301:1254",
+        0
+      ]
+    },
+    "class_type": "KSamplerAdvanced",
+    "_meta": {
+      "title": "2-KSampler (Advanced) LOW"
+    }
+  },
+  "1301:1256": {
+    "inputs": {
+      "width": [
+        "607",
+        0
+      ],
+      "height": [
+        "607",
+        1
+      ],
+      "length": [
+        "608",
+        0
+      ],
+      "batch_size": 1,
+      "motion_frames": [
+        "605",
+        0
+      ],
+      "motion_amplitude": [
+        "604",
+        0
+      ],
+      "positive": [
+        "1301:1257",
+        0
+      ],
+      "negative": [
+        "1301:1259",
+        0
+      ],
+      "vae": [
+        "916",
+        0
+      ],
+      "previous_video": [
+        "1301:1260",
+        0
+      ],
+      "initial_reference_image": [
+        "97",
+        0
+      ]
+    },
+    "class_type": "PainterLongVideo",
+    "_meta": {
+      "title": "2-PainterLongVideo"
+    }
+  },
+  "1301:1257": {
+    "inputs": {
+      "text": "她吐了吐舌头，俏皮的笑了",
+      "clip": [
+        "921",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "second prompt"
+    }
+  },
+  "1301:1258": {
+    "inputs": {
+      "samples": [
+        "1301:1255",
+        0
+      ],
+      "vae": [
+        "916",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "1301:1259": {
+    "inputs": {
+      "text": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走",
+      "clip": [
+        "921",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Negative Prompt)"
+    }
+  },
+  "1301:1260": {
+    "inputs": {
+      "upscale_method": "nearest-exact",
+      "scale_by": 2,
+      "image": [
+        "1301:1261",
+        0
+      ]
+    },
+    "class_type": "ImageScaleBy",
+    "_meta": {
+      "title": "Upscale Image By"
+    }
+  },
+  "1301:1261": {
+    "inputs": {
+      "indexes": "-1",
+      "err_if_missing": true,
+      "err_if_empty": true,
+      "image": [
+        "1288",
+        1
+      ]
+    },
+    "class_type": "VHS_SelectImages",
+    "_meta": {
+      "title": "Select Images 🎥🅥🅗🅢"
+    }
+  },
+  "1301:308": {
+    "inputs": {
+      "seed": -1
+    },
+    "class_type": "Seed (rgthree)",
+    "_meta": {
+      "title": "2-Seed high"
+    }
+  },
+  "1301:1254": {
+    "inputs": {
+      "add_noise": "enable",
+      "noise_seed": [
+        "1301:308",
+        0
+      ],
+      "steps": 4,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "start_at_step": 0,
+      "end_at_step": 2,
+      "return_with_leftover_noise": "enable",
+      "model": [
+        "1252:1246",
+        0
+      ],
+      "positive": [
+        "1301:1256",
+        0
+      ],
+      "negative": [
+        "1301:1256",
+        1
+      ],
+      "latent_image": [
+        "1301:1256",
+        2
+      ]
+    },
+    "class_type": "KSamplerAdvanced",
+    "_meta": {
+      "title": "2-KSampler (Advanced) HIGH"
+    }
+  },
+  "1313:1253": {
+    "inputs": {
+      "inputcount": 2,
+      "Update inputs": null,
+      "image_1": [
+        "1300",
+        1
+      ],
+      "image_2": [
+        "1313:1258",
+        0
+      ]
+    },
+    "class_type": "ImageBatchMulti",
+    "_meta": {
+      "title": "Image Batch Multi"
+    }
+  },
+  "1313:1255": {
+    "inputs": {
+      "add_noise": "disable",
+      "noise_seed": 0,
+      "steps": 4,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "start_at_step": 2,
+      "end_at_step": 100,
+      "return_with_leftover_noise": "disable",
+      "model": [
+        "1252:1247",
+        0
+      ],
+      "positive": [
+        "1313:1256",
+        0
+      ],
+      "negative": [
+        "1313:1256",
+        1
+      ],
+      "latent_image": [
+        "1313:1254",
+        0
+      ]
+    },
+    "class_type": "KSamplerAdvanced",
+    "_meta": {
+      "title": "2-KSampler (Advanced) LOW"
+    }
+  },
+  "1313:1256": {
+    "inputs": {
+      "width": [
+        "607",
+        0
+      ],
+      "height": [
+        "607",
+        1
+      ],
+      "length": [
+        "608",
+        0
+      ],
+      "batch_size": 1,
+      "motion_frames": [
+        "605",
+        0
+      ],
+      "motion_amplitude": [
+        "604",
+        0
+      ],
+      "positive": [
+        "1313:1257",
+        0
+      ],
+      "negative": [
+        "1313:1259",
+        0
+      ],
+      "vae": [
+        "916",
+        0
+      ],
+      "previous_video": [
+        "1313:1260",
+        0
+      ],
+      "initial_reference_image": [
+        "97",
+        0
+      ]
+    },
+    "class_type": "PainterLongVideo",
+    "_meta": {
+      "title": "2-PainterLongVideo"
+    }
+  },
+  "1313:1257": {
+    "inputs": {
+      "text": "她爬起来转身走了，镜头拉远，",
+      "clip": [
+        "921",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "second prompt"
+    }
+  },
+  "1313:1258": {
+    "inputs": {
+      "samples": [
+        "1313:1255",
+        0
+      ],
+      "vae": [
+        "916",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "1313:1259": {
+    "inputs": {
+      "text": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走",
+      "clip": [
+        "921",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Negative Prompt)"
+    }
+  },
+  "1313:1260": {
+    "inputs": {
+      "upscale_method": "nearest-exact",
+      "scale_by": 2,
+      "image": [
+        "1313:1261",
+        0
+      ]
+    },
+    "class_type": "ImageScaleBy",
+    "_meta": {
+      "title": "Upscale Image By"
+    }
+  },
+  "1313:1261": {
+    "inputs": {
+      "indexes": "-1",
+      "err_if_missing": true,
+      "err_if_empty": true,
+      "image": [
+        "1300",
+        1
+      ]
+    },
+    "class_type": "VHS_SelectImages",
+    "_meta": {
+      "title": "Select Images 🎥🅥🅗🅢"
+    }
+  },
+  "1313:308": {
+    "inputs": {
+      "seed": -1
+    },
+    "class_type": "Seed (rgthree)",
+    "_meta": {
+      "title": "2-Seed high"
+    }
+  },
+  "1313:1254": {
+    "inputs": {
+      "add_noise": "enable",
+      "noise_seed": [
+        "1313:308",
+        0
+      ],
+      "steps": 4,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "start_at_step": 0,
+      "end_at_step": 2,
+      "return_with_leftover_noise": "enable",
+      "model": [
+        "1252:1246",
+        0
+      ],
+      "positive": [
+        "1313:1256",
+        0
+      ],
+      "negative": [
+        "1313:1256",
+        1
+      ],
+      "latent_image": [
+        "1313:1256",
+        2
+      ]
+    },
+    "class_type": "KSamplerAdvanced",
+    "_meta": {
+      "title": "2-KSampler (Advanced) HIGH"
+    }
+  }
+}
